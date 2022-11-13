@@ -70,7 +70,33 @@ func main() {
 
 		return c.JSON(employees)
 	})
-	app.Post("/employee")
+	app.Post("/employee", func(c *fiber.Ctx) error{
+		collection := ng.Db.Collection("employees")
+
+		employee := new(Employee)
+
+		if err := c.BodyParser(employee); err != nil {
+			return c.Status(400).SendString(err.Error())
+		}
+		employee.ID = ""
+
+		Result, err := collection.InsertOne(c.Context(), employee)
+		if err != nil {
+			return c.Status(500).SendString(err.Error())
+		}
+
+		filter := bson.D{{Key: "_id", Value: Result.InsertedID}}
+		createdRecord := collection.FindOne(c.Context(), filter)
+
+		creadtedEmployee := &Employee{}
+		createdRecord.Decode(creadtedEmployee)
+
+		return c.Status(201).JSON(creadtedEmployee)
+
+
+
+	})
+
 	app.Put("/employee:id")
 	app.Delete("/employee:id")
 }
